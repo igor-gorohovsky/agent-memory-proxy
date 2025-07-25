@@ -64,7 +64,6 @@ agent-memory-proxy/
 ### Type Hints
 - All functions have type hints
 - Use `typing` module for complex types
-- Use None, list, dict, set, tuple and pipe ('|') instead of Union, Optional, List, Dict, Set, Tuple
 
 ## Testing Strategy
 
@@ -84,6 +83,7 @@ poetry run pytest tests
 # Specific test
 poetry run pytest tests/<specific_test_name.py>
 ```
+When you want run watcher for tests ALWAYS set small timeout
 
 ## Platform-Specific Considerations
 
@@ -101,4 +101,3 @@ poetry run pytest tests/<specific_test_name.py>
 - No systemd by default
 - Use Windows Task Scheduler or nohup
 - Path translation between Windows and WSL
-
