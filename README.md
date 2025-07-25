@@ -104,7 +104,13 @@ GEMINI.md
 
 ### 5. Run the Proxy
 
+Make sure to export the environment variable first:
+
 ```bash
+# Set the paths to watch
+export AGENT_MEMORY_PATHS="/path/to/your/projects"
+
+# Run the proxy
 poetry run amp
 # Or with poetry environment:
 poetry run python src/main.py

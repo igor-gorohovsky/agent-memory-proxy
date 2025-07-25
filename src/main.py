@@ -4,8 +4,9 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 
+import pathspec
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -22,6 +23,77 @@ logging.basicConfig(
 logger = logging.getLogger("agent-memory-proxy")
 
 
+class GitignoreManager:
+    """Manages gitignore rules for filtering directories and files"""
+    
+    def __init__(self, root_path: Path):
+        self.root_path = root_path.resolve()
+        self.spec_cache: Dict[Path, Optional[pathspec.PathSpec]] = {}
+        
+    def _find_gitignore_files(self, directory: Path) -> List[Path]:
+        """Find all .gitignore files from directory up to root"""
+        gitignore_files = []
+        current = directory.resolve()
+        
+        while current.is_relative_to(self.root_path) or current == self.root_path:
+            gitignore_path = current / ".gitignore"
+            if gitignore_path.exists():
+                gitignore_files.append(gitignore_path)
+            
+            if current == self.root_path:
+                break
+            current = current.parent
+            
+        return reversed(gitignore_files)
+    
+    def _load_gitignore_spec(self, directory: Path) -> Optional[pathspec.PathSpec]:
+        """Load and parse gitignore rules for a directory"""
+        if directory in self.spec_cache:
+            return self.spec_cache[directory]
+            
+        try:
+            gitignore_files = self._find_gitignore_files(directory)
+            patterns = []
+            
+            for gitignore_file in gitignore_files:
+                with open(gitignore_file, 'r', encoding=DEFAULT_ENCODING) as f:
+                    patterns.extend(f.read().splitlines())
+            
+            if patterns:
+                spec = pathspec.PathSpec.from_lines('gitwildmatch', patterns)
+                self.spec_cache[directory] = spec
+                return spec
+            else:
+                self.spec_cache[directory] = None
+                return None
+                
+        except Exception as e:
+            logger.debug(f"Error loading gitignore for {directory}: {e}")
+            self.spec_cache[directory] = None
+            return None
+    
+    def is_ignored(self, path: Path) -> bool:
+        """Check if a path should be ignored based on gitignore rules"""
+        path = path.resolve()
+        
+        # Get relative path from root
+        try:
+            rel_path = path.relative_to(self.root_path)
+        except ValueError:
+            # Path is outside root, don't ignore
+            return False
+        
+        # Check gitignore rules from the path's directory
+        directory = path.parent if path.is_file() else path
+        spec = self._load_gitignore_spec(directory)
+        
+        if spec is None:
+            return False
+            
+        # Check if path matches any ignore patterns
+        return spec.match_file(str(rel_path))
+
+
 class MemoryProxyConfig:
     """Handles configuration parsing and validation"""
 
@@ -29,6 +101,8 @@ class MemoryProxyConfig:
         self.config_path = config_path
         self.directory = config_path.parent
         self.mappings: Dict[str, str] = {}
+        self.recursive: bool = True
+        self.respect_gitignore: bool = True
         self.load_config()
 
     def load_config(self):
@@ -43,8 +117,14 @@ class MemoryProxyConfig:
                 )
 
             self.mappings = config["mappings"]
+            
+            # Load optional settings with defaults
+            self.recursive = config.get("recursive", True)
+            self.respect_gitignore = config.get("respect_gitignore", True)
+            
             logger.info(
-                f"Loaded config from {self.config_path} with {len(self.mappings)} mappings"
+                f"Loaded config from {self.config_path} with {len(self.mappings)} mappings "
+                f"(recursive={self.recursive}, respect_gitignore={self.respect_gitignore})"
             )
 
         except Exception as e:
@@ -64,6 +144,11 @@ class MemorySyncHandler(FileSystemEventHandler):
         self.target_files: Set[Path] = set()
         for target, source in self.config.mappings.items():
             self.target_files.add(self.config.directory / target)
+            
+        # Initialize gitignore manager if enabled
+        self.gitignore_manager: Optional[GitignoreManager] = None
+        if self.config.respect_gitignore:
+            self.gitignore_manager = GitignoreManager(self.config.directory)
 
     def on_modified(self, event):
         """Handle file modification events"""
@@ -72,6 +157,11 @@ class MemorySyncHandler(FileSystemEventHandler):
 
         file_path = Path(event.src_path)
         logger.debug(f"File modified: {file_path}")
+
+        # Skip ignored files
+        if self.gitignore_manager and self.gitignore_manager.is_ignored(file_path):
+            logger.debug(f"Skipping ignored file: {file_path}")
+            return
 
         # Prevent recursive syncing
         if self.syncing:
@@ -91,18 +181,43 @@ class MemorySyncHandler(FileSystemEventHandler):
             # Check if this is a source file that needs syncing
             synced_targets = []
             for target, source in self.config.mappings.items():
+                # Handle both absolute and relative source paths in recursive mode
                 source_path = self.config.directory / source
-                target_path = self.config.directory / target
 
-                # If source file was modified, sync to all its targets
+                # In recursive mode, check if the modified file matches any source
+                # either directly or if it's the same filename in a subdirectory
+                file_matches_source = False
+                
                 if file_path == source_path:
-                    self.sync_file(source_path, target_path)
-                    synced_targets.append(target)
+                    # Direct match - create target at config level
+                    file_matches_source = True
+                    target_path = self.config.directory / target
+                elif self.config.recursive:
+                    # Check if it's the same filename in a subdirectory
+                    if file_path.name == source_path.name and file_path.is_relative_to(self.config.directory):
+                        file_matches_source = True
+                        # Create target in the same directory as the modified source file
+                        target_path = file_path.parent / target
+
+                if file_matches_source:
+                    self.sync_file(file_path, target_path)
+                    synced_targets.append(str(target_path))
             
             # Log all synced targets in one message
             if synced_targets:
-                targets_str = ", ".join(synced_targets)
-                logger.info(f"Synced {file_path.name} -> {targets_str}")
+                # Show directory path once, then source and target filenames
+                source_rel = file_path.relative_to(self.config.directory)
+                source_dir = source_rel.parent if source_rel.parent != Path('.') else self.config.directory.name
+                target_filenames = []
+                for target_path_str in synced_targets:
+                    target_path_obj = Path(target_path_str)
+                    target_filenames.append(target_path_obj.name)
+                
+                targets_str = ", ".join(target_filenames)
+                if source_dir == self.config.directory.name:
+                    logger.info(f"Synced {source_dir}/{source_rel.name} -> {targets_str}")
+                else:
+                    logger.info(f"Synced {source_dir}/{source_rel.name} -> {targets_str}")
                 self.last_sync_time = current_time
         finally:
             # Reset syncing flag after all targets are processed
@@ -136,14 +251,45 @@ class MemorySyncHandler(FileSystemEventHandler):
 
         for target, source in self.config.mappings.items():
             source_path = self.config.directory / source
-            target_path = self.config.directory / target
 
             if source_path.exists():
+                # Direct match - create target at config level
+                target_path = self.config.directory / target
                 self.sync_file(source_path, target_path)
+            elif self.config.recursive:
+                # In recursive mode, search for source files with the same name in subdirectories
+                found_source = self._find_source_file_recursive(source)
+                if found_source:
+                    # Create target in the same directory as the found source file
+                    target_path = found_source.parent / target
+                    self.sync_file(found_source, target_path)
+                else:
+                    logger.warning(
+                        f"Source file {source} not found in {self.config.directory} or subdirectories"
+                    )
             else:
                 logger.warning(
                     f"Source file {source_path} does not exist, skipping initial sync"
                 )
+                
+    def _find_source_file_recursive(self, source_filename: str) -> Optional[Path]:
+        """Find a source file with the given name in subdirectories"""
+        try:
+            for root, dirs, files in os.walk(self.config.directory):
+                # Filter out ignored directories if gitignore is enabled
+                if self.gitignore_manager:
+                    dirs[:] = [d for d in dirs if not self.gitignore_manager.is_ignored(Path(root) / d)]
+                
+                if source_filename in files:
+                    candidate_path = Path(root) / source_filename
+                    # Skip if the file is ignored
+                    if self.gitignore_manager and self.gitignore_manager.is_ignored(candidate_path):
+                        continue
+                    return candidate_path
+        except Exception as e:
+            logger.debug(f"Error searching for {source_filename}: {e}")
+        
+        return None
 
 
 class MemoryProxyWatcher:
@@ -169,15 +315,25 @@ class MemoryProxyWatcher:
         return paths
 
     def scan_for_configs(self, directory: Path) -> List[Path]:
-        """Recursively scan directory for config files"""
+        """Recursively scan directory for config files, respecting gitignore"""
         configs = []
+        gitignore_manager = GitignoreManager(directory)
 
         try:
             for root, dirs, files in os.walk(directory):
+                root_path = Path(root)
+                
+                # Filter out ignored directories to avoid walking into them
+                dirs[:] = [d for d in dirs if not gitignore_manager.is_ignored(root_path / d)]
+                
                 if CONFIG_FILENAME in files:
-                    config_path = Path(root) / CONFIG_FILENAME
-                    configs.append(config_path)
-                    logger.info(f"Found config: {config_path}")
+                    config_path = root_path / CONFIG_FILENAME
+                    # Check if the config file itself is ignored
+                    if not gitignore_manager.is_ignored(config_path):
+                        configs.append(config_path)
+                        logger.info(f"Found config: {config_path}")
+                    else:
+                        logger.debug(f"Skipping ignored config: {config_path}")
         except Exception as e:
             logger.error(f"Error scanning directory {directory}: {e}")
 
@@ -199,12 +355,13 @@ class MemoryProxyWatcher:
             # Perform initial sync
             handler.initial_sync()
 
-            # Watch the directory
-            self.observer.schedule(handler, str(watch_path), recursive=False)
+            # Watch the directory with recursive setting from config
+            self.observer.schedule(handler, str(watch_path), recursive=config.recursive)
             self.handlers[config_path] = handler
             self.watched_directories.add(watch_path)
 
-            logger.info(f"Watching directory: {watch_path}")
+            watch_mode = "recursively" if config.recursive else "non-recursively"
+            logger.info(f"Watching directory {watch_mode}: {watch_path}")
 
         except Exception as e:
             logger.error(f"Failed to add watcher for {config_path}: {e}")
