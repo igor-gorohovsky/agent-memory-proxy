@@ -22,7 +22,7 @@ Agent Memory Proxy provides a "proxy" layer that automatically synchronizes a si
 ## 📋 Requirements
 
 - Python 3.8+
-- Poetry (Python dependency management)
+- Poetry (Python dependency management) - [Installation guide](https://python-poetry.org/docs/#installation)
 
 ## 🚀 Quick Start
 
@@ -32,7 +32,7 @@ Agent Memory Proxy provides a "proxy" layer that automatically synchronizes a si
 
 ```bash
 # Clone the repository
-git clone https://github.com/igorohovsky/agent-memory-proxy.git
+git clone https://github.com/igor-gorohovsky/agent-memory-proxy.git
 cd agent-memory-proxy
 
 # Install Poetry if you haven't already
@@ -42,14 +42,14 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry install
 
 # Run the proxy
-poetry run main
+poetry run agent-memory-proxy
 ```
 
 #### Option 2: Using pip
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/agent-memory-proxy.git
+git clone https://github.com/igor-gorohovsky/agent-memory-proxy.git
 cd agent-memory-proxy
 
 # Install from pyproject.toml
@@ -105,7 +105,9 @@ GEMINI.md
 ### 5. Run the Proxy
 
 ```bash
-python agent_memory_proxy.py
+poetry run agent-memory-proxy
+# Or with poetry environment:
+poetry run python src/main.py
 ```
 
 ## 🖥️ Platform-Specific Setup
@@ -117,7 +119,8 @@ python agent_memory_proxy.py
    ```batch
    @echo off
    cd /d "C:\path\to\agent-memory-proxy"
-   python agent_memory_proxy.py
+   REM Ensure Poetry is installed and in PATH first
+   poetry run agent-memory-proxy
    ```
 
 2. Open Task Scheduler and create a new task:
@@ -127,8 +130,12 @@ python agent_memory_proxy.py
 
 #### Option 2: Windows Service
 Use [NSSM](https://nssm.cc/) to install as a service:
+
+**Note**: Ensure Poetry is installed and dependencies are installed first via `poetry install`.
+
 ```cmd
-nssm install AgentMemoryProxy "C:\Python39\python.exe" "C:\path\to\agent_memory_proxy.py"
+nssm install AgentMemoryProxy "C:\path\to\poetry.exe" "run agent-memory-proxy"
+nssm set AgentMemoryProxy AppDirectory "C:\path\to\agent-memory-proxy"
 nssm start AgentMemoryProxy
 ```
 
@@ -151,9 +158,12 @@ Win+R → shell:startup
        <string>com.agent-memory-proxy</string>
        <key>ProgramArguments</key>
        <array>
-           <string>/usr/bin/python3</string>
-           <string>/path/to/agent_memory_proxy.py</string>
+           <string>/usr/local/bin/poetry</string>
+           <string>run</string>
+           <string>agent-memory-proxy</string>
        </array>
+       <key>WorkingDirectory</key>
+       <string>/path/to/agent-memory-proxy</string>
        <key>RunAtLoad</key>
        <true/>
        <key>KeepAlive</key>
@@ -178,6 +188,9 @@ Add to Login Items in System Preferences → Users & Groups
 ### Linux
 
 #### Option 1: systemd (Recommended)
+
+**Note**: Ensure Poetry is installed and run `poetry install` in the project directory first.
+
 1. Create `/etc/systemd/system/agent-memory-proxy.service`:
    ```ini
    [Unit]
@@ -188,7 +201,8 @@ Add to Login Items in System Preferences → Users & Groups
    Type=simple
    User=yourusername
    Environment="AGENT_MEMORY_PATHS=/home/yourusername/projects"
-   ExecStart=/usr/bin/python3 /path/to/agent_memory_proxy.py
+   WorkingDirectory=/path/to/agent-memory-proxy
+   ExecStart=/usr/local/bin/poetry run agent-memory-proxy
    Restart=always
 
    [Install]
@@ -205,7 +219,7 @@ Add to Login Items in System Preferences → Users & Groups
 ```bash
 crontab -e
 # Add:
-@reboot AGENT_MEMORY_PATHS="/home/user/projects" /usr/bin/python3 /path/to/agent_memory_proxy.py
+@reboot cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS="/home/user/projects" /usr/local/bin/poetry run agent-memory-proxy
 ```
 
 ### WSL (Windows Subsystem for Linux)
@@ -215,16 +229,16 @@ Since WSL doesn't have systemd by default, use one of these approaches:
 #### Option 1: Windows Task Scheduler
 Create a task that runs:
 ```
-wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects python3 agent_memory_proxy.py"
+wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects poetry run agent-memory-proxy"
 ```
 
 #### Option 2: Background Process
 Add to `~/.bashrc` or `~/.zshrc`:
 ```bash
 # Start agent memory proxy if not running
-if ! pgrep -f "agent_memory_proxy.py" > /dev/null; then
+if ! pgrep -f "agent-memory-proxy" > /dev/null; then
     export AGENT_MEMORY_PATHS="/home/user/projects"
-    nohup python3 /path/to/agent_memory_proxy.py > ~/.agent-memory-proxy.log 2>&1 &
+    cd /path/to/agent-memory-proxy && nohup poetry run agent-memory-proxy > ~/.agent-memory-proxy.log 2>&1 &
 fi
 ```
 
@@ -288,7 +302,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/agent-memory-proxy.git
+   git clone https://github.com/igor-gorohovsky/agent-memory-proxy.git
    cd agent-memory-proxy
    ```
 
@@ -300,7 +314,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. **Install development dependencies**
    ```bash
    poetry install
-   poetry run pre-commit install
    ```
 
 4. **Run tests**
