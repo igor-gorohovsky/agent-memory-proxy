@@ -1,0 +1,6 @@
+mappings:
+  CLAUDE.md: MEMORY.md
+  GEMINI.md: MEMORY.md
+  QWEN.md: MEMORY.md
+  .cursor/rules/project.mdc: MEMORY.md
+  # CUSTOM_AGENT.md: CUSTOM_MEMORY_FILE.md

@@ -1,0 +1,7 @@
+.venv
+
+CLAUDE.md
+GEMINI.md
+QWEN.md
+.cursor/rules
+__pycache__

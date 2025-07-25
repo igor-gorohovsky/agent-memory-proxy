@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "amp"
+version = "0.1.0"
+description = "Unified memory management for AI code agents"
+authors = ["Igor Gorohovsky <igor.gorohhovsky@yandex.ru>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+watchdog = "^3.0.0"
+PyYAML = "^6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.0"
+
+[tool.poetry.scripts]
+agent-memory-proxy = "src.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
