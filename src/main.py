@@ -58,6 +58,8 @@ class MemorySyncHandler(FileSystemEventHandler):
     def __init__(self, config: MemoryProxyConfig):
         self.config = config
         self.syncing = False
+        self.last_sync_time = 0.0
+        self.debounce_delay = 0.05  # 50ms debounce
         # Track which files are targets (generated files)
         self.target_files: Set[Path] = set()
         for target, source in self.config.mappings.items():
@@ -68,27 +70,47 @@ class MemorySyncHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
+        file_path = Path(event.src_path)
+        logger.debug(f"File modified: {file_path}")
+
         # Prevent recursive syncing
         if self.syncing:
+            logger.debug(f"Skipping {file_path} - currently syncing")
             return
 
-        file_path = Path(event.src_path)
+        # Debounce rapid fire events
+        current_time = time.time()
+        time_since_last = current_time - self.last_sync_time
+        if time_since_last < self.debounce_delay:
+            logger.debug(f"Debouncing {file_path} - {time_since_last:.3f}s since last sync")
+            return
 
-        # Check if this is a source file that needs syncing
-        for target, source in self.config.mappings.items():
-            source_path = self.config.directory / source
-            target_path = self.config.directory / target
+        # Set syncing flag before processing any targets
+        self.syncing = True
+        try:
+            # Check if this is a source file that needs syncing
+            synced_targets = []
+            for target, source in self.config.mappings.items():
+                source_path = self.config.directory / source
+                target_path = self.config.directory / target
 
-            # If source file was modified, sync to all its targets
-            if file_path == source_path:
-                self.sync_file(source_path, target_path)
-                break
+                # If source file was modified, sync to all its targets
+                if file_path == source_path:
+                    self.sync_file(source_path, target_path)
+                    synced_targets.append(target)
+            
+            # Log all synced targets in one message
+            if synced_targets:
+                targets_str = ", ".join(synced_targets)
+                logger.info(f"Synced {file_path.name} -> {targets_str}")
+                self.last_sync_time = current_time
+        finally:
+            # Reset syncing flag after all targets are processed
+            self.syncing = False
 
     def sync_file(self, source: Path, target: Path):
         """Sync content from source to target file"""
         try:
-            self.syncing = True
-
             if not source.exists():
                 logger.warning(f"Source file {source} does not exist")
                 return
@@ -104,12 +126,9 @@ class MemorySyncHandler(FileSystemEventHandler):
             with open(target, "w", encoding=DEFAULT_ENCODING) as f:
                 f.write(content)
 
-            logger.info(f"Synced {source.name} -> {target}")
 
         except Exception as e:
             logger.error(f"Failed to sync {source} to {target}: {e}")
-        finally:
-            self.syncing = False
 
     def initial_sync(self):
         """Perform initial sync for all mappings"""
@@ -168,13 +187,19 @@ class MemoryProxyWatcher:
         """Add a watcher for a specific config"""
         try:
             config = MemoryProxyConfig(config_path)
+            watch_path = config.directory
+
+            # Check if directory is already being watched
+            if watch_path in self.watched_directories:
+                logger.warning(f"Directory {watch_path} is already being watched, skipping {config_path}")
+                return
+
             handler = MemorySyncHandler(config)
 
             # Perform initial sync
             handler.initial_sync()
 
             # Watch the directory
-            watch_path = config.directory
             self.observer.schedule(handler, str(watch_path), recursive=False)
             self.handlers[config_path] = handler
             self.watched_directories.add(watch_path)
