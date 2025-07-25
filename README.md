@@ -42,7 +42,7 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry install
 
 # Run the proxy
-poetry run agent-memory-proxy
+poetry run amp
 ```
 
 #### Option 2: Using pip
@@ -105,7 +105,7 @@ GEMINI.md
 ### 5. Run the Proxy
 
 ```bash
-poetry run agent-memory-proxy
+poetry run amp
 # Or with poetry environment:
 poetry run python src/main.py
 ```
@@ -120,7 +120,7 @@ poetry run python src/main.py
    @echo off
    cd /d "C:\path\to\agent-memory-proxy"
    REM Ensure Poetry is installed and in PATH first
-   poetry run agent-memory-proxy
+   poetry run amp
    ```
 
 2. Open Task Scheduler and create a new task:
@@ -134,7 +134,7 @@ Use [NSSM](https://nssm.cc/) to install as a service:
 **Note**: Ensure Poetry is installed and dependencies are installed first via `poetry install`.
 
 ```cmd
-nssm install AgentMemoryProxy "C:\path\to\poetry.exe" "run agent-memory-proxy"
+nssm install AgentMemoryProxy "C:\path\to\poetry.exe" "run amp"
 nssm set AgentMemoryProxy AppDirectory "C:\path\to\agent-memory-proxy"
 nssm start AgentMemoryProxy
 ```
@@ -160,7 +160,7 @@ Win+R → shell:startup
        <array>
            <string>/usr/local/bin/poetry</string>
            <string>run</string>
-           <string>agent-memory-proxy</string>
+           <string>amp</string>
        </array>
        <key>WorkingDirectory</key>
        <string>/path/to/agent-memory-proxy</string>
@@ -202,7 +202,7 @@ Add to Login Items in System Preferences → Users & Groups
    User=yourusername
    Environment="AGENT_MEMORY_PATHS=/home/yourusername/projects"
    WorkingDirectory=/path/to/agent-memory-proxy
-   ExecStart=/usr/local/bin/poetry run agent-memory-proxy
+   ExecStart=/usr/local/bin/poetry run amp
    Restart=always
 
    [Install]
@@ -219,7 +219,7 @@ Add to Login Items in System Preferences → Users & Groups
 ```bash
 crontab -e
 # Add:
-@reboot cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS="/home/user/projects" /usr/local/bin/poetry run agent-memory-proxy
+@reboot cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS="/home/user/projects" /usr/local/bin/poetry run amp
 ```
 
 ### WSL (Windows Subsystem for Linux)
@@ -229,16 +229,16 @@ Since WSL doesn't have systemd by default, use one of these approaches:
 #### Option 1: Windows Task Scheduler
 Create a task that runs:
 ```
-wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects poetry run agent-memory-proxy"
+wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects poetry run amp"
 ```
 
 #### Option 2: Background Process
 Add to `~/.bashrc` or `~/.zshrc`:
 ```bash
 # Start agent memory proxy if not running
-if ! pgrep -f "agent-memory-proxy" > /dev/null; then
+if ! pgrep -f "amp" > /dev/null; then
     export AGENT_MEMORY_PATHS="/home/user/projects"
-    cd /path/to/agent-memory-proxy && nohup poetry run agent-memory-proxy > ~/.agent-memory-proxy.log 2>&1 &
+    cd /path/to/agent-memory-proxy && nohup poetry run amp > ~/.agent-memory-proxy.log 2>&1 &
 fi
 ```
 

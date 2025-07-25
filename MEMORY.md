@@ -85,6 +85,17 @@ poetry run pytest tests/<specific_test_name.py>
 ```
 When you want run watcher for tests ALWAYS set small timeout
 
+## Running the Application
+
+### Command Line Usage
+```bash
+# Run with Poetry
+poetry run amp
+
+# Alternative (direct Python)
+poetry run python src/main.py
+```
+
 ## Platform-Specific Considerations
 
 ### Windows
