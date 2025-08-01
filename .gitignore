@@ -6,3 +6,4 @@ QWEN.md
 .cursor/rules
 __pycache__
 .tox
+.coverage
