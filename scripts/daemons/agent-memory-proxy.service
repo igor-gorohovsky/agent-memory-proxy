@@ -1,0 +1,14 @@
+[Unit]
+Description=Agent Memory Proxy
+After=network.target
+
+[Service]
+Type=simple
+User=%USER%
+Environment=%AGENT_MEMORY_PATHS%
+ExecStart=%PYTHON_PATH% %WORKING_DIR%/src/main.py
+Restart=always
+WorkingDirectory=%WORKING_DIR%
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,7 @@
-mappings:
-  CLAUDE.md: MEMORY.md
-  GEMINI.md: MEMORY.md
-  QWEN.md: MEMORY.md
-  .cursor/rules/project.mdc: MEMORY.md
-  # CUSTOM_AGENT.md: CUSTOM_MEMORY_FILE.md
+respect_gitignore: true
+truth_memory_file: "AGENT.md"
+agents:
+  - claude
+  - gemini
+  - qwen
+  - cursor

@@ -8,7 +8,7 @@ The AI/LLM industry is evolving rapidly, and developers now have access to numer
 
 ## 💡 Solution
 
-Agent Memory Proxy provides a "proxy" layer that automatically synchronizes a single memory file with various agent-specific formats. You maintain one `MEMORY.md` file, and the proxy handles the adaptation to different agent formats automatically.
+Agent Memory Proxy provides a "proxy" layer that automatically synchronizes a single memory file with various agent-specific formats. You maintain one `AGENT.md` file, and the proxy handles the adaptation to different agent formats automatically.
 
 ## ✨ Key Features
 
@@ -64,12 +64,13 @@ pip install -e .
 Create a `.amp.yaml` file in your project directory:
 
 ```yaml
-mappings:
-  # Map agent-specific files to your main memory file
-  CLAUDE.md: MEMORY.md
-  GEMINI.md: MEMORY.md
-  .cursor/rules/project.mdc: MEMORY.md
-  .github/copilot/project-context.md: MEMORY.md
+respect_gitignore: true
+truth_memory_file: "AGENT.md"
+agents:
+  - claude
+  - gemini
+  - cursor
+  - copilot
 ```
 
 ### 3. Set Environment Variable
@@ -253,7 +254,7 @@ fi
 ```
 my-project/
 ├── .amp.yaml                   # Configuration
-├── MEMORY.md                   # Your single source of truth
+├── AGENT.md                    # Your single source of truth
 ├── CLAUDE.md                   # Generated (gitignored)
 ├── GEMINI.md                   # Generated (gitignored)
 ├── .cursor/
@@ -269,11 +270,12 @@ my-project/
 You can map different source files to different targets:
 
 ```yaml
-mappings:
-  CLAUDE.md: MEMORY.md
-  GEMINI.md: MEMORY.md
-  .cursor/rules/project.mdc: CURSOR_MEMORY.md
-  docs/API_CONTEXT.md: API_DOCS.md
+respect_gitignore: true
+truth_memory_file: "AGENT.md"
+agents:
+  - claude
+  - gemini
+  - cursor
 ```
 
 ### Watching Multiple Projects
