@@ -19,7 +19,7 @@ agent-memory-proxy/
 │   ├── install.bat          # Windows installation script
 │   └── daemons/             # Service/daemon configurations
 ├── tests/
-├── pyproject.toml           # Poetry configuration
+├── pyproject.toml           # uv/Python configuration
 ├── README.md                # User documentation
 ├── AGENT.md                 # This file - development context
 ├── .amp.yaml                # Project's own proxy config
@@ -38,6 +38,10 @@ agent-memory-proxy/
 - Avoid using relative imports
 
 ### Commands
-- Run tests: `poetry run pytest tests`
-- **Important**: When running watcher for tests ALWAYS set small timeout: `timeout 3 poetry run amp`
+- Run tests: `uv run pytest tests`
+- Run lint + type check + tests on all Python versions: `tox`
+- Run specific Python versions (each includes lint + type check + tests): `tox -e py39,py310,py311,py312,py313`
+- Run only linting: `tox -e lint` or `uv run ruff check src/`
+- Run only type checking: `tox -e type-check` or `uv run basedpyright src/`
+- **Important**: When running watcher for tests ALWAYS set small timeout: `timeout 3 uv run amp`
 

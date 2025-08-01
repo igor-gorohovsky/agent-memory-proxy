@@ -20,14 +20,24 @@ echo.
 REM Install dependencies
 echo Installing dependencies...
 
-REM Check if Poetry is installed
-where poetry >nul 2>&1
+REM Check if uv is installed
+where uv >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Poetry detected, using Poetry to install...
-    poetry install
+    echo uv detected, using uv to install...
+    uv sync
 ) else (
-    echo Poetry not found, using pip...
-    python -m pip install .
+    echo uv not found, installing uv...
+    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+    
+    REM Check if uv installed successfully
+    where uv >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo uv installed successfully
+        uv sync
+    ) else (
+        echo Failed to install uv automatically, using pip fallback...
+        python -m pip install .
+    )
 )
 
 if %errorlevel% neq 0 (
@@ -51,7 +61,7 @@ echo Creating start script...
 echo @echo off
 echo cd /d "%CD%"
 echo set AGENT_MEMORY_PATHS=%USERPROFILE%\projects
-echo python src/main.py
+echo uv run amp
 ) > start_agent_memory_proxy.bat
 
 echo.
@@ -68,7 +78,7 @@ echo 2. Create .amp.yaml in your projects
 echo.
 echo 3. Run the proxy:
 echo    - Double-click start_agent_memory_proxy.bat
-echo    - Or run: python src/main.py
+echo    - Or run: uv run amp
 echo.
 echo Optional: Add to Windows startup
 echo    - Press Win+R, type: shell:startup

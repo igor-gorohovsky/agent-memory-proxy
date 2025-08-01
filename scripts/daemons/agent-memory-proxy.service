@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=%USER%
 Environment=%AGENT_MEMORY_PATHS%
-ExecStart=%PYTHON_PATH% %WORKING_DIR%/src/main.py
+ExecStart=/home/%USER%/.cargo/bin/uv run --directory %WORKING_DIR% amp
 Restart=always
 WorkingDirectory=%WORKING_DIR%
 

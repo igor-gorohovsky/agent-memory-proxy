@@ -6,8 +6,11 @@
     <string>com.agent-memory-proxy</string>
     <key>ProgramArguments</key>
     <array>
-        <string>%PYTHON_PATH%</string>
-        <string>%WORKING_DIR%/src/main.py</string>
+        <string>%HOME%/.cargo/bin/uv</string>
+        <string>run</string>
+        <string>--directory</string>
+        <string>%WORKING_DIR%</string>
+        <string>amp</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

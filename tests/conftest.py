@@ -1,8 +1,9 @@
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
-from typing import Generator
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture

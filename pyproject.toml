@@ -1,27 +1,84 @@
-[tool.poetry]
+[project]
 name = "amp"
 version = "0.1.0"
 description = "Unified memory management for AI code agents"
-authors = ["Igor Gorohovsky <igor.gorohhovsky@yandex.ru>"]
-license = "MIT"
+authors = [{ name = "Igor Gorohovsky", email = "igor.gorohhovsky@yandex.ru" }]
+license = { text = "MIT" }
 readme = "README.md"
-packages = [{ include = "*", from = "src" }]
+requires-python = ">=3.9"
+dependencies = [
+    "watchdog>=3.0.0",
+    "PyYAML>=6.0",
+    "pathspec>=0.11.0",
+    "pydantic>=2.11.7",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-watchdog = "^3.0.0"
-PyYAML = "^6.0"
-pathspec = "^0.11.0"
-pydantic = "^2.11.7"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
-pytest-cov = "^4.1.0"
-pytest-mock = "^3.11.0"
-
-[tool.poetry.scripts]
+[project.scripts]
 amp = "src.main:main"
 
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "ruff>=0.1.0",
+    "basedpyright>=1.0.0",
+    "tox-uv>=1.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py39"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.basedpyright]
+include = ["src"]
+exclude = ["tests"]
+pythonVersion = "3.9"
+typeCheckingMode = "standard"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

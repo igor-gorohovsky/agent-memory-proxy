@@ -21,28 +21,28 @@ Agent Memory Proxy provides a "proxy" layer that automatically synchronizes a si
 
 ## 📋 Requirements
 
-- Python 3.8+
-- Poetry (Python dependency management) - [Installation guide](https://python-poetry.org/docs/#installation)
+- Python 3.9+
+- uv (Python package manager) - [Installation guide](https://github.com/astral-sh/uv)
 
 ## 🚀 Quick Start
 
 ### 1. Installation
 
-#### Option 1: Using Poetry (Recommended)
+#### Option 1: Using uv (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/igor-gorohovsky/agent-memory-proxy.git
 cd agent-memory-proxy
 
-# Install Poetry if you haven't already
-curl -sSL https://install.python-poetry.org | python3 -
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies
-poetry install
+uv sync
 
 # Run the proxy
-poetry run amp
+uv run amp
 ```
 
 #### Option 2: Using pip
@@ -112,9 +112,7 @@ Make sure to export the environment variable first:
 export AGENT_MEMORY_PATHS="/path/to/your/projects"
 
 # Run the proxy
-poetry run amp
-# Or with poetry environment:
-poetry run python src/main.py
+uv run amp
 ```
 
 ## 🖥️ Platform-Specific Setup
@@ -126,8 +124,8 @@ poetry run python src/main.py
    ```batch
    @echo off
    cd /d "C:\path\to\agent-memory-proxy"
-   REM Ensure Poetry is installed and in PATH first
-   poetry run amp
+   REM Ensure uv is installed and in PATH first
+   uv run amp
    ```
 
 2. Open Task Scheduler and create a new task:
@@ -138,10 +136,10 @@ poetry run python src/main.py
 #### Option 2: Windows Service
 Use [NSSM](https://nssm.cc/) to install as a service:
 
-**Note**: Ensure Poetry is installed and dependencies are installed first via `poetry install`.
+**Note**: Ensure uv is installed and dependencies are installed first via `uv sync`.
 
 ```cmd
-nssm install AgentMemoryProxy "C:\path\to\poetry.exe" "run amp"
+nssm install AgentMemoryProxy "C:\path\to\uv.exe" "run amp"
 nssm set AgentMemoryProxy AppDirectory "C:\path\to\agent-memory-proxy"
 nssm start AgentMemoryProxy
 ```
@@ -165,8 +163,10 @@ Win+R → shell:startup
        <string>com.agent-memory-proxy</string>
        <key>ProgramArguments</key>
        <array>
-           <string>/usr/local/bin/poetry</string>
+           <string>/Users/you/.cargo/bin/uv</string>
            <string>run</string>
+           <string>--directory</string>
+           <string>/path/to/agent-memory-proxy</string>
            <string>amp</string>
        </array>
        <key>WorkingDirectory</key>
@@ -196,7 +196,7 @@ Add to Login Items in System Preferences → Users & Groups
 
 #### Option 1: systemd (Recommended)
 
-**Note**: Ensure Poetry is installed and run `poetry install` in the project directory first.
+**Note**: Ensure uv is installed and run `uv sync` in the project directory first.
 
 1. Create `/etc/systemd/system/agent-memory-proxy.service`:
    ```ini
@@ -209,7 +209,7 @@ Add to Login Items in System Preferences → Users & Groups
    User=yourusername
    Environment="AGENT_MEMORY_PATHS=/home/yourusername/projects"
    WorkingDirectory=/path/to/agent-memory-proxy
-   ExecStart=/usr/local/bin/poetry run amp
+   ExecStart=/home/yourusername/.cargo/bin/uv run amp
    Restart=always
 
    [Install]
@@ -226,7 +226,7 @@ Add to Login Items in System Preferences → Users & Groups
 ```bash
 crontab -e
 # Add:
-@reboot cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS="/home/user/projects" /usr/local/bin/poetry run amp
+@reboot cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS="/home/user/projects" /home/user/.cargo/bin/uv run amp
 ```
 
 ### WSL (Windows Subsystem for Linux)
@@ -236,7 +236,7 @@ Since WSL doesn't have systemd by default, use one of these approaches:
 #### Option 1: Windows Task Scheduler
 Create a task that runs:
 ```
-wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects poetry run amp"
+wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects uv run amp"
 ```
 
 #### Option 2: Background Process
@@ -245,7 +245,7 @@ Add to `~/.bashrc` or `~/.zshrc`:
 # Start agent memory proxy if not running
 if ! pgrep -f "amp" > /dev/null; then
     export AGENT_MEMORY_PATHS="/home/user/projects"
-    cd /path/to/agent-memory-proxy && nohup poetry run amp > ~/.agent-memory-proxy.log 2>&1 &
+    cd /path/to/agent-memory-proxy && nohup uv run amp > ~/.agent-memory-proxy.log 2>&1 &
 fi
 ```
 
@@ -314,19 +314,34 @@ Contributions are welcome! Please feel free to submit a Pull Request.
    cd agent-memory-proxy
    ```
 
-2. **Install Poetry**
+2. **Install uv**
    ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
 3. **Install development dependencies**
    ```bash
-   poetry install
+   uv sync
    ```
 
 4. **Run tests**
    ```bash
-   poetry run pytest tests
+   uv run pytest tests
+   ```
+
+5. **Run tests on all Python versions (3.9-3.13)**
+   ```bash
+   # Install tox
+   uv tool install tox
+   
+   # Run lint, type check, and tests on all supported Python versions
+   tox
+   
+   # Run specific environments (each includes lint + type check + tests)
+   tox -e py39,py310,py311,py312,py313
+   
+   # Run only linting or type checking (single environment)
+   tox -e lint,type-check
    ```
 
 ### Development Workflow

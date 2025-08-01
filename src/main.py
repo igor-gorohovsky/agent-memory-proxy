@@ -2,13 +2,11 @@ import sys
 import time
 
 from log import logger
-
-from watchdog.observers import Observer
 from watcher import MemoryProxyWatcher
 
 
 def main() -> None:
-    watcher = MemoryProxyWatcher(Observer())
+    watcher = MemoryProxyWatcher()
 
     try:
         if not watcher.start():

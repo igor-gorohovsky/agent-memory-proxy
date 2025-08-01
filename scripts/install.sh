@@ -23,13 +23,25 @@ check_python_version() {
 }
 
 install_dependencies() {
-    if command -v poetry &> /dev/null; then
-        echo "✓ Poetry is installed"
-        echo "Installing dependencies with Poetry..."
-        poetry install
+    if command -v uv &> /dev/null; then
+        echo "✓ uv is installed"
+        echo "Installing dependencies with uv..."
+        uv sync
     else
-        echo "⚠️  Poetry not found. You need to install poetry first..."
-        exit 1
+        echo "⚠️  uv not found. Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+        # Add uv to PATH for current session
+        export PATH="$HOME/.cargo/bin:$PATH"
+        
+        if command -v uv &> /dev/null; then
+            echo "✓ uv installed successfully"
+            echo "Installing dependencies with uv..."
+            uv sync
+        else
+            echo "❌ Failed to install uv. Please install manually: https://github.com/astral-sh/uv"
+            exit 1
+        fi
     fi
 }
 
@@ -80,18 +92,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
                 exit 1
             fi
             
-            # Get python path
-            PYTHON_PATH=$(which python3 2>/dev/null)
-            if [ -z "$PYTHON_PATH" ]; then
-                echo "❌ Error: python3 not found in PATH"
-                exit 1
-            fi
-            
             # Copy template and replace placeholders using mktemp
             SERVICE_TEMP=$(mktemp)
             sed -e "s|%USER%|$USER|g" \
                 -e "s|%HOME%|$HOME|g" \
-                -e "s|%PYTHON_PATH%|$PYTHON_PATH|g" \
                 -e "s|%WORKING_DIR%|$PROJECT_DIR|g" \
                 "$PROJECT_DIR/scripts/daemons/agent-memory-proxy.service" > "$SERVICE_TEMP"
             
@@ -117,19 +121,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
                 exit 1
             fi
             
-            # Get python path
-            PYTHON_PATH=$(which python3 2>/dev/null)
-            if [ -z "$PYTHON_PATH" ]; then
-                echo "❌ Error: python3 not found in PATH"
-                exit 1
-            fi
-            
             # Create LaunchAgents directory if it doesn't exist
             mkdir -p "$HOME/Library/LaunchAgents"
             
             # Copy template and replace placeholders
             sed -e "s|%HOME%|$HOME|g" \
-                -e "s|%PYTHON_PATH%|$PYTHON_PATH|g" \
                 -e "s|%WORKING_DIR%|$PROJECT_DIR|g" \
                 "$PROJECT_DIR/scripts/daemons/com.agent-memory-proxy.plist" > "$PLIST_FILE"
             
@@ -143,7 +139,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         wsl)
             echo "⚠️  WSL detected. Service installation not supported."
             echo "You can run the service in the background using:"
-            echo "  nohup python3 $PROJECT_DIR/src/main.py > ~/agent-memory-proxy.log 2>&1 &"
+            echo "  nohup uv run --directory $PROJECT_DIR amp > ~/agent-memory-proxy.log 2>&1 &"
             echo "Or use Windows Task Scheduler from the Windows side."
             ;;
             
@@ -162,6 +158,6 @@ echo
 echo "Next steps:"
 echo "1. Set AGENT_MEMORY_PATHS environment variable"
 echo "2. Create .amp.yaml in your projects"
-echo "3. Run: python3 $PROJECT_DIR/src/main.py"
+echo "3. Run: uv run amp"
 echo
 echo "See README.md for detailed instructions"
