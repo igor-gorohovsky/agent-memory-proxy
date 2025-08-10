@@ -15,12 +15,13 @@ Agent Memory Proxy provides a "proxy" layer that automatically synchronizes a si
 - **Single Source of Truth**: Maintain one memory file that syncs to all agents
 - **Automatic Synchronization**: File watcher detects changes and updates agent-specific files
 - **Multi-Agent Support**: Works with Claude, Gemini, Cursor, and easily extensible to others
-- **Cross-Platform**: Runs on Windows, macOS, Linux, and WSL
+- **Linux/Ubuntu Focused**: Optimized for Linux environments
 - **Lightweight**: Minimal dependencies, runs in the background
 - **Git-Friendly**: Generated files can be gitignored to avoid conflicts
 
 ## 📋 Requirements
 
+- Linux/Ubuntu operating system
 - Python 3.9+
 - uv (Python package manager) - [Installation guide](https://github.com/astral-sh/uv)
 
@@ -75,19 +76,8 @@ agents:
 
 ### 3. Set Environment Variable
 
-Add directories to watch (separated by platform-specific path separator):
+Add directories to watch (separated by colon):
 
-#### Windows (PowerShell)
-```powershell
-$env:AGENT_MEMORY_PATHS = "C:\projects\my-app;C:\projects\another-app"
-```
-
-#### Windows (Command Prompt)
-```cmd
-set AGENT_MEMORY_PATHS=C:\projects\my-app;C:\projects\another-app
-```
-
-#### macOS/Linux/WSL
 ```bash
 export AGENT_MEMORY_PATHS="/home/user/projects:/home/user/work/specific_project"
 ```
@@ -115,84 +105,7 @@ export AGENT_MEMORY_PATHS="/path/to/your/projects"
 uv run amp
 ```
 
-## 🖥️ Platform-Specific Setup
-
-### Windows
-
-#### Option 1: Task Scheduler (Recommended)
-1. Create a batch file `start_memory_proxy.bat`:
-   ```batch
-   @echo off
-   cd /d "C:\path\to\agent-memory-proxy"
-   REM Ensure uv is installed and in PATH first
-   uv run amp
-   ```
-
-2. Open Task Scheduler and create a new task:
-   - Trigger: At log on
-   - Action: Start `start_memory_proxy.bat`
-   - Settings: Run whether user is logged on or not
-
-#### Option 2: Windows Service
-Use [NSSM](https://nssm.cc/) to install as a service:
-
-**Note**: Ensure uv is installed and dependencies are installed first via `uv sync`.
-
-```cmd
-nssm install AgentMemoryProxy "C:\path\to\uv.exe" "run amp"
-nssm set AgentMemoryProxy AppDirectory "C:\path\to\agent-memory-proxy"
-nssm start AgentMemoryProxy
-```
-
-#### Option 3: Startup Folder
-Place the batch file in:
-```
-Win+R → shell:startup
-```
-
-### macOS
-
-#### Option 1: launchd (Recommended)
-1. Create `~/Library/LaunchAgents/com.agent-memory-proxy.plist`:
-   ```xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>Label</key>
-       <string>com.agent-memory-proxy</string>
-       <key>ProgramArguments</key>
-       <array>
-           <string>/Users/you/.cargo/bin/uv</string>
-           <string>run</string>
-           <string>--directory</string>
-           <string>/path/to/agent-memory-proxy</string>
-           <string>amp</string>
-       </array>
-       <key>WorkingDirectory</key>
-       <string>/path/to/agent-memory-proxy</string>
-       <key>RunAtLoad</key>
-       <true/>
-       <key>KeepAlive</key>
-       <true/>
-       <key>EnvironmentVariables</key>
-       <dict>
-           <key>AGENT_MEMORY_PATHS</key>
-           <string>/Users/you/projects</string>
-       </dict>
-   </dict>
-   </plist>
-   ```
-
-2. Load the service:
-   ```bash
-   launchctl load ~/Library/LaunchAgents/com.agent-memory-proxy.plist
-   ```
-
-#### Option 2: Login Items
-Add to Login Items in System Preferences → Users & Groups
-
-### Linux
+## 🖥️ Linux Setup
 
 #### Option 1: systemd (Recommended)
 
@@ -229,25 +142,6 @@ crontab -e
 @reboot cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS="/home/user/projects" /home/user/.cargo/bin/uv run amp
 ```
 
-### WSL (Windows Subsystem for Linux)
-
-Since WSL doesn't have systemd by default, use one of these approaches:
-
-#### Option 1: Windows Task Scheduler
-Create a task that runs:
-```
-wsl.exe -d Ubuntu -u yourusername -- bash -c "cd /path/to/agent-memory-proxy && AGENT_MEMORY_PATHS=/home/user/projects uv run amp"
-```
-
-#### Option 2: Background Process
-Add to `~/.bashrc` or `~/.zshrc`:
-```bash
-# Start agent memory proxy if not running
-if ! pgrep -f "amp" > /dev/null; then
-    export AGENT_MEMORY_PATHS="/home/user/projects"
-    cd /path/to/agent-memory-proxy && nohup uv run amp > ~/.agent-memory-proxy.log 2>&1 &
-fi
-```
 
 ## 📁 Example Project Structure
 
@@ -280,14 +174,10 @@ agents:
 
 ### Watching Multiple Projects
 
-Set multiple paths in the environment variable:
+Set multiple paths in the environment variable (colon-separated):
 
 ```bash
-# Unix-like (colon-separated)
 export AGENT_MEMORY_PATHS="/project1:/project2:/project3"
-
-# Windows (semicolon-separated)
-set AGENT_MEMORY_PATHS=C:\project1;C:\project2;C:\project3
 ```
 
 ## 🐛 Troubleshooting
@@ -299,8 +189,7 @@ set AGENT_MEMORY_PATHS=C:\project1;C:\project2;C:\project3
 - Run with `--verbose` flag for detailed logs
 
 ### Permission Errors
-- On Unix systems, ensure you have read/write permissions
-- On Windows, run as Administrator if needed
+- Ensure you have read/write permissions for the watched directories
 
 ## 🤝 Contributing
 

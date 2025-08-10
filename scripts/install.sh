@@ -59,95 +59,44 @@ install_dependencies
 # Create directories if needed
 mkdir -p ~/.config/agent-memory-proxy
 
-# Detect OS
-OS="unknown"
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    # Check for WSL
-    if grep -qi microsoft /proc/version 2>/dev/null; then
-        OS="wsl"
-    else
-        OS="linux"
-    fi
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    OS="macos"
-elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-    OS="windows"
+# Check we're on Linux
+if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+    echo "❌ Error: This installer only supports Linux/Ubuntu"
+    exit 1
 fi
 
-echo "✓ Detected OS: $OS"
+echo "✓ Running on Linux"
 
 # Offer to install as service
-read -p "Would you like to install as a background service? (y/n) " -n 1 -r
+read -p "Would you like to install as a systemd service? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    case $OS in
-        linux)
-            # Create systemd service
-            SERVICE_FILE="/etc/systemd/system/agent-memory-proxy.service"
-            echo "Creating systemd service..."
-            
-            # Check if service template exists
-            if [ ! -f "$PROJECT_DIR/scripts/daemons/agent-memory-proxy.service" ]; then
-                echo "❌ Error: Service template not found at $PROJECT_DIR/scripts/daemons/agent-memory-proxy.service"
-                exit 1
-            fi
-            
-            # Copy template and replace placeholders using mktemp
-            SERVICE_TEMP=$(mktemp)
-            sed -e "s|%USER%|$USER|g" \
-                -e "s|%HOME%|$HOME|g" \
-                -e "s|%WORKING_DIR%|$PROJECT_DIR|g" \
-                "$PROJECT_DIR/scripts/daemons/agent-memory-proxy.service" > "$SERVICE_TEMP"
-            
-            sudo mv "$SERVICE_TEMP" "$SERVICE_FILE"
-            if ! sudo systemctl daemon-reload 2>/dev/null; then
-                echo "⚠️  Warning: Failed to reload systemd daemon"
-            fi
-            if ! sudo systemctl enable agent-memory-proxy 2>/dev/null; then
-                echo "⚠️  Warning: Failed to enable service"
-            fi
-            echo "✓ Systemd service installed"
-            echo "To start: sudo systemctl start agent-memory-proxy"
-            ;;
-            
-        macos)
-            # Create launchd plist
-            PLIST_FILE="$HOME/Library/LaunchAgents/com.agent-memory-proxy.plist"
-            echo "Creating launchd service..."
-            
-            # Check if plist template exists
-            if [ ! -f "$PROJECT_DIR/scripts/daemons/com.agent-memory-proxy.plist" ]; then
-                echo "❌ Error: Plist template not found at $PROJECT_DIR/scripts/daemons/com.agent-memory-proxy.plist"
-                exit 1
-            fi
-            
-            # Create LaunchAgents directory if it doesn't exist
-            mkdir -p "$HOME/Library/LaunchAgents"
-            
-            # Copy template and replace placeholders
-            sed -e "s|%HOME%|$HOME|g" \
-                -e "s|%WORKING_DIR%|$PROJECT_DIR|g" \
-                "$PROJECT_DIR/scripts/daemons/com.agent-memory-proxy.plist" > "$PLIST_FILE"
-            
-            if ! launchctl load "$PLIST_FILE" 2>/dev/null; then
-                echo "⚠️  Warning: Failed to load launchd service"
-            fi
-            echo "✓ Launchd service installed"
-            echo "Service will start automatically on login"
-            ;;
-            
-        wsl)
-            echo "⚠️  WSL detected. Service installation not supported."
-            echo "You can run the service in the background using:"
-            echo "  nohup uv run --directory $PROJECT_DIR amp > ~/agent-memory-proxy.log 2>&1 &"
-            echo "Or use Windows Task Scheduler from the Windows side."
-            ;;
-            
-        *)
-            echo "⚠️  Automatic service installation not supported for this OS"
-            echo "Please refer to the README for manual setup instructions"
-            ;;
-    esac
+    # Create systemd service
+    SERVICE_FILE="/etc/systemd/system/agent-memory-proxy.service"
+    echo "Creating systemd service..."
+    
+    # Check if service template exists
+    if [ ! -f "$PROJECT_DIR/scripts/daemons/agent-memory-proxy.service" ]; then
+        echo "❌ Error: Service template not found at $PROJECT_DIR/scripts/daemons/agent-memory-proxy.service"
+        exit 1
+    fi
+    
+    # Copy template and replace placeholders using mktemp
+    SERVICE_TEMP=$(mktemp)
+    sed -e "s|%USER%|$USER|g" \
+        -e "s|%HOME%|$HOME|g" \
+        -e "s|%WORKING_DIR%|$PROJECT_DIR|g" \
+        "$PROJECT_DIR/scripts/daemons/agent-memory-proxy.service" > "$SERVICE_TEMP"
+    
+    sudo mv "$SERVICE_TEMP" "$SERVICE_FILE"
+    if ! sudo systemctl daemon-reload 2>/dev/null; then
+        echo "⚠️  Warning: Failed to reload systemd daemon"
+    fi
+    if ! sudo systemctl enable agent-memory-proxy 2>/dev/null; then
+        echo "⚠️  Warning: Failed to enable service"
+    fi
+    echo "✓ Systemd service installed"
+    echo "To start: sudo systemctl start agent-memory-proxy"
 fi
 
 echo

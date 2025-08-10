@@ -15,8 +15,7 @@ agent-memory-proxy/
 │   ├── sync.py              # Synchronization logic
 │   └── watcher.py           # File watching implementation
 ├── scripts/
-│   ├── install.sh           # Unix installation script
-│   ├── install.bat          # Windows installation script
+│   ├── install.sh           # Linux installation script
 │   └── daemons/             # Service/daemon configurations
 ├── tests/
 ├── pyproject.toml           # uv/Python configuration
